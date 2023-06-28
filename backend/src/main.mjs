@@ -1,18 +1,20 @@
 import express from "express"
 import cors from "cors"
 
+import { Usuario, Mensaxes } from "./db.mjs"
+
 const app = express()
 app.use(cors())
 
 const clientesSSE = new Map()
 
-app.get('/chat', (peticion, resposta)=>{
+app.get('/chat', async (peticion, resposta)=>{
     /**
      * Necesitamos enviar respuestas individualizadas a los diferentes usuarios que
      * se conectan, así que hemos de mantener un directorio de los diferentes usuarios
      * el objeto de respuesta correspondiente a cada uno de ellos.
      */ 
-    const idUsuario = peticion.body.id
+    const idUsuario = peticion.body.id // Esta no es forma, deberíamos obtener el id de un JWT
     clientesSSE.set(idUsuario, resposta)
     /** 
      * Enviamos los encabezados de la respuesta al cliente
@@ -30,9 +32,19 @@ app.get('/chat', (peticion, resposta)=>{
             'Connection': 'keep-alive'
         }
     )
+    /**
+     * Agora entregamos as mensaxes destinadas ó usuario obtidas da base de datos.
+     */
+    const mensaxes = await Mensaxes.findAll({
+        where: {idDestinatario: idUsuario}
+    })
+    resposta.json(mensaxes)
+
 });
 
-app.get("/chat", )
+app.post("/chat", (peticion, resposta)=>{
+
+})
 
 app.listen( process.env.PORT ?? 8000, ()=>{
     console.log("Funcionando...");
