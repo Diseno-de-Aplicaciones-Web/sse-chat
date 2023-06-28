@@ -1,5 +1,6 @@
 import express from "express"
 import cors from "cors"
+import { Op, or } from "sequelize"
 
 import { Usuario, Mensaxes } from "./db.mjs"
 
@@ -36,9 +37,11 @@ app.get('/chat', async (peticion, resposta)=>{
      * Agora entregamos as mensaxes destinadas ó usuario obtidas da base de datos.
      */
     const mensaxes = await Mensaxes.findAll({
-        where: {idDestinatario: idUsuario}
+        where: { [Op.or]: [{remitente: idUsuario},{destinatario: idUsuario}] }
     })
-    resposta.json(mensaxes)
+    for ( let mensaxe of mensaxes ) {
+        resposta.write(mensaxes)
+    }
 
 });
 
