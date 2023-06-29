@@ -1,6 +1,6 @@
 import express from "express"
 import cors from "cors"
-import { Op, or } from "sequelize"
+import { Op } from "sequelize"
 
 import { Usuario, Mensaxes } from "./db.mjs"
 import { enviarEvento, manterConectado } from "./lib/sse.mjs"
@@ -8,6 +8,7 @@ import { enviarEvento, manterConectado } from "./lib/sse.mjs"
 const app = express()
 app.use(cors())
 
+/** Lista de clientes conectados */
 const clientesSSE = new Map()
 
 app.get('/chat', async (peticion, resposta)=>{
@@ -16,7 +17,7 @@ app.get('/chat', async (peticion, resposta)=>{
      * se conectan, así que hemos de mantener un directorio de los diferentes usuarios
      * el objeto de respuesta correspondiente a cada uno de ellos.
      */ 
-    const idUsuario = peticion.body.id // Esta no es forma, deberíamos obtener el id de un JWT
+    const idUsuario = peticion.body.id // Esto non é xeito, deberíamos coller o id dun JWT
     clientesSSE.set(idUsuario, resposta)
     /** 
      * Enviamos los encabezados de la respuesta al cliente
@@ -36,7 +37,7 @@ app.get('/chat', async (peticion, resposta)=>{
     )
     manterConectado(30000,resposta)
     /**
-     * Agora entregamos as mensaxes destinadas ó usuario obtidas da base de datos.
+     * Agora entregamos as mensaxes que implican ó usuario, obtidas da base de datos.
      */
     const mensaxes = await Mensaxes.findAll({
         where: { [Op.or]: [{remitente: idUsuario},{destinatario: idUsuario}] }
@@ -44,14 +45,23 @@ app.get('/chat', async (peticion, resposta)=>{
     enviarEvento("mensaxes-previas",JSON.stringify(mensaxes), resposta)
 });
 
-app.post("/chat", (peticion, resposta)=>{
-    
+app.post("/chat", express.json(), (peticion, resposta)=>{
+    /** @type {import("./lib/defines.mjs").Envio} */
+    const envio = peticion.body
+    const conexionDestinatario = clientesSSE.get(envio.mensaxe.destinatario)
+    /** @type {import("./lib/defines.mjs").Mensaxe} */
+    const mensaxe = {
+        remitente: envio.id,
+        destinatario: envio.mensaxe.destinatario,
+        contido: envio.mensaxe.contido
+    }
+    Mensaxes.create(mensaxe)
+    if ( conexionDestinatario ) {
+        enviarEvento("nova-mensaxe", peticion.body, conexionDestinatario)
+    }
+    resposta.sendStatus(200)
 })
 
 app.listen( process.env.PORT ?? 8000, ()=>{
     console.log("Funcionando...");
 } )
-
-export {
-    app
-}
