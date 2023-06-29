@@ -11,8 +11,7 @@ const Usuario = sequelize.define("Usuario", {
 })
 
 const Mensaxes = sequelize.define("Mensaxes",{
-    contido:  DataTypes.STRING,
-    lido: DataTypes.BOOLEAN
+    contido:  DataTypes.STRING
 })
 
 Usuario.hasMany(Mensaxes, { as: "enviado", foreignKey: "remitente"})
