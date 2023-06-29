@@ -47,10 +47,10 @@ app.get('/chat/:idUsuario', async (peticion, resposta)=>{
 });
 
 app.post("/chat", express.json(), (peticion, resposta)=>{
-    /** @type {import("./lib/defines.mjs/index.js").Envio} */
+    /** @type {import("./lib/defines.mjs").Envio} */
     const envio = peticion.body
     const conexionDestinatario = clientesSSE.get(envio.mensaxe.destinatario)
-    /** @type {import("./lib/defines.mjs/index.js").Mensaxe} */
+    /** @type {import("./lib/defines.mjs").Mensaxe} */
     const mensaxe = {
         remitente: envio.id,
         destinatario: envio.mensaxe.destinatario,
