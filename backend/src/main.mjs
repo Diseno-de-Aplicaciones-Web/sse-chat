@@ -3,6 +3,7 @@ import cors from "cors"
 import { Op, or } from "sequelize"
 
 import { Usuario, Mensaxes } from "./db.mjs"
+import { enviarEvento, manterConectado } from "./lib/sse.mjs"
 
 const app = express()
 app.use(cors())
@@ -33,20 +34,18 @@ app.get('/chat', async (peticion, resposta)=>{
             'Connection': 'keep-alive'
         }
     )
+    manterConectado(30000,resposta)
     /**
      * Agora entregamos as mensaxes destinadas ó usuario obtidas da base de datos.
      */
     const mensaxes = await Mensaxes.findAll({
         where: { [Op.or]: [{remitente: idUsuario},{destinatario: idUsuario}] }
     })
-    for ( let mensaxe of mensaxes ) {
-        resposta.write(mensaxes)
-    }
-
+    enviarEvento("mensaxes-previas",JSON.stringify(mensaxes), resposta)
 });
 
 app.post("/chat", (peticion, resposta)=>{
-
+    
 })
 
 app.listen( process.env.PORT ?? 8000, ()=>{
