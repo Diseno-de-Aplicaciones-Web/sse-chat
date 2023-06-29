@@ -1,3 +1,10 @@
+/** @typedef {import("./lib/defines.mjs").ManexadorEventoSSE} ManexadorEventoSSE */
+/** @typedef {import("./lib/defines.mjs").EnvioNovaMensaxe} EnvioNovaMensaxe */
+/** @typedef {import("./lib/defines.mjs").Mensaxe} Mensaxe */
+
+import { construeMensaxeDesdeEnvio }  from "./lib/sse.mjs"
+
+// Obtemos elementos de DOM
 const form = document.querySelector("form")
 const button = document.querySelector("button")
 /** @type {HTMLInputElement} */
@@ -7,7 +14,7 @@ const inputDestinatario = document.querySelector("input[name='destinatario']")
 const inputMensaxe = document.querySelector("textarea")
 const div = document.querySelector("div#mensaxes")
 
-/** @type {import("../lib/defines.mjs").Mensaxe[]} */
+/** @type {Mensaxe[]} */
 let mensaxes = []
 
 /** @type {EventSource} */
@@ -18,7 +25,7 @@ async function manexadorEnviar(evento) {
 
     evento.preventDefault()
 
-    /** @type {import("../lib/defines.mjs").Envio} */
+    /** @type {EnvioNovaMensaxe} */
     const envio = {
         id: Number(inputRemitente.value),
         mensaxe: {
@@ -34,12 +41,7 @@ async function manexadorEnviar(evento) {
     })
 
     if ( resposta.ok ) {
-        /** @type {import("../lib/defines.mjs").Mensaxe} */
-        const mensaxeEnviada = {
-            remitente: envio.id,
-            destinatario: envio.mensaxe.destinatario,
-            contido: envio.mensaxe.contido
-        }
+        const mensaxeEnviada = construeMensaxeDesdeEnvio(envio)
         mensaxes.push(mensaxeEnviada)
         renderizaMensaxes(mensaxes)
     } else {
@@ -55,7 +57,7 @@ function manexadorCambioRemitente() {
     fonteSSE.addEventListener("nova-mensaxe", menxadorNovasMensaxes)
 }
 
-/** @param {import("../lib/defines.mjs").Mensaxe[]} mensaxes */
+/** @param {Mensaxe[]} mensaxes */
 function renderizaMensaxes(mensaxes) {
     div.innerHTML=""
     for ( let mensaxe of mensaxes ) {
@@ -66,19 +68,18 @@ function renderizaMensaxes(mensaxes) {
     }
 }
 
-/** @type {import("../lib/defines.mjs").ManexadorEventoSSE} */
+/** @type {ManexadorEventoSSE} */
 function menxadorMensaxesPrevias(evento) {
-    console.log(evento.type)
     mensaxes = JSON.parse(evento.data)
     renderizaMensaxes(mensaxes)
 }
 
-/** @type {import("../lib/defines.mjs").ManexadorEventoSSE} */
+/** @type {ManexadorEventoSSE} */
 function menxadorNovasMensaxes(evento) {
-    console.log(evento.type)
     mensaxes.push(JSON.parse(evento.data))
     renderizaMensaxes(mensaxes)
 }
 
+// Asigna manexadores a eventos de obxetos do DOM
 button.addEventListener("click", manexadorEnviar)
 inputRemitente.addEventListener("input", manexadorCambioRemitente)

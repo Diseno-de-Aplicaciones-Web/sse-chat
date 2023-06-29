@@ -14,7 +14,7 @@
  */
 
 /**
- * @typedef Envio
+ * @typedef EnvioNovaMensaxe
  * @type {Object}
  * @prop {Number} id - Id do remitente
  * @prop {NovaMensaxe} mensaxe
