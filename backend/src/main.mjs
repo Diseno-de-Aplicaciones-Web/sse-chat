@@ -2,8 +2,8 @@ import express from "express"
 import cors from "cors"
 import { Op } from "sequelize"
 
-import { Usuario, Mensaxes } from "./db.mjs"
-import { enviarEvento, manterConectado } from "./lib/sse.mjs"
+import { Mensaxes } from "./db.mjs"
+import { enviarEvento } from "./lib/sse.mjs"
 
 const app = express()
 app.use(cors())
@@ -11,14 +11,16 @@ app.use(cors())
 /** Lista de clientes conectados */
 const clientesSSE = new Map()
 
-app.get('/chat', async (peticion, resposta)=>{
+app.get('/chat/:idUsuario', async (peticion, resposta)=>{
     /**
      * Necesitamos enviar respuestas individualizadas a los diferentes usuarios que
      * se conectan, así que hemos de mantener un directorio de los diferentes usuarios
      * el objeto de respuesta correspondiente a cada uno de ellos.
      */ 
-    const idUsuario = peticion.body.id // Esto non é xeito, deberíamos coller o id dun JWT
+    const idUsuario = Number(peticion.params.idUsuario) // Esto non é xeito, deberíamos coller o id dun JWT
     clientesSSE.set(idUsuario, resposta)
+    /** Se se pecha a conexión, eliminamos a resposta da lista de clientes */
+    resposta.on("close",()=>{clientesSSE.delete(idUsuario)})
     /** 
      * Enviamos los encabezados de la respuesta al cliente
      * Los encabezados Content-Type y Connection son los que consiguen que
@@ -30,12 +32,11 @@ app.get('/chat', async (peticion, resposta)=>{
     resposta.writeHead(
         200,
         {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache', // Opcional
             'Content-Type': 'text/event-stream',
             'Connection': 'keep-alive'
         }
     )
-    manterConectado(30000,resposta)
     /**
      * Agora entregamos as mensaxes que implican ó usuario, obtidas da base de datos.
      */
@@ -46,10 +47,10 @@ app.get('/chat', async (peticion, resposta)=>{
 });
 
 app.post("/chat", express.json(), (peticion, resposta)=>{
-    /** @type {import("./lib/defines.mjs").Envio} */
+    /** @type {import("./lib/defines.mjs/index.js").Envio} */
     const envio = peticion.body
     const conexionDestinatario = clientesSSE.get(envio.mensaxe.destinatario)
-    /** @type {import("./lib/defines.mjs").Mensaxe} */
+    /** @type {import("./lib/defines.mjs/index.js").Mensaxe} */
     const mensaxe = {
         remitente: envio.id,
         destinatario: envio.mensaxe.destinatario,
@@ -57,10 +58,13 @@ app.post("/chat", express.json(), (peticion, resposta)=>{
     }
     Mensaxes.create(mensaxe)
     if ( conexionDestinatario ) {
-        enviarEvento("nova-mensaxe", peticion.body, conexionDestinatario)
+        enviarEvento("nova-mensaxe", JSON.stringify(mensaxe), conexionDestinatario)
     }
     resposta.sendStatus(200)
 })
+
+/** Sirve el frontend */
+app.use(express.static('./src/static'))
 
 app.listen( process.env.PORT ?? 8000, ()=>{
     console.log("Funcionando...");

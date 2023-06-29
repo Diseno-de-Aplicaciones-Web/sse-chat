@@ -19,3 +19,9 @@
  * @prop {Number} id - Id do remitente
  * @prop {NovaMensaxe} mensaxe
  */
+
+/**
+ * @callback ManexadorEventoSSE
+ * @param {MessageEvent} evento
+ * @returns {void}
+ */
